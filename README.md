@@ -34,7 +34,7 @@ I haven't had a usecase for io_uring yet so looking forward to learning what it 
 
 ### Tiling
 
-With very large images, it may be woth processing the images into tiles instead. Essentially the image would be indexed beforehand, allowing the cropper to find the relevant tiles for the specific crop.
+Tiling is the only way to work with very very large images. However, tiling an image increases implementation and storage complexity significantly. I'll look into whether this approach is necessary.
 
 ### mmap and madvise
 
