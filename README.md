@@ -1,18 +1,22 @@
-# Cropping very large images
+# Cropping large images
 
 Exploration into cropping large images.
 
 ## Background and goals
 
-The background to this exploration is a need for cropping very large images in a fashion that keeps the memory and CPU footprint as small as possible. The hidden proprietary problem driving this exploration requires lossless handling of images.
+The background to this exploration is a need for cropping large (100MB+) images in a fashion that keeps the memory and CPU footprint as small as possible. The hidden proprietary problem driving this exploration is to support high-performance, lossless, concurrent cropping of large images for Data Science purposes.
 
-Exploration focus:
+Areas of interest:
 
-1. Block- vs pixel-by-pixel copy
-2. Seekable compressed stream (zstd)
-3. io_uring
-4. Tiling
+1. Image file format
+2. Block- vs pixel-by-pixel copy
+3. Seekable compressed stream (zstd)
+4. io_uring
 5. mmap and madvise
+
+### Image file format 
+
+Let's consider different file formats. Theres JPEG (lossy) and PNG (lossless) which provides low size images. This is great for websites, but not great for cropping. For example, it is not possible to predictably jump to a specific pixel; all pages of the image must be fed from disk to the page cache, to user-space, only to be discarded. Not great.
 
 ### Pixel-by-pixel vs block copy
 
@@ -31,10 +35,6 @@ Depending on the crop placement, skipping the portion of the file that is irrele
 For concurrent cropping performance, IO uring can help with asynchronously reading from many images at once while minimizing byte copying between user and kernel space.
 
 I haven't had a usecase for io_uring yet so looking forward to learning what it can and cannot do.
-
-### Tiling
-
-Tiling is the only way to work with very very large images. However, tiling an image increases implementation and storage complexity significantly. I'll look into whether this approach is necessary.
 
 ### mmap and madvise
 
