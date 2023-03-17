@@ -25,26 +25,25 @@ func NewBMPMultiCropper(r io.Reader) *BMPMultiCropper {
 	return &BMPMultiCropper{r: r}
 }
 
-func (b *BMPMultiCropper) Crop(cropArea image.Rectangle, out io.Writer) error {
-	b.mtx.Lock()
-	defer b.mtx.Unlock()
+func (c *BMPMultiCropper) Crop(cropArea image.Rectangle, out io.Writer) error {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
 
 	// Guard against re-cropping of the same image unless it has been provided
 	// as an io.Seeker (can be reset)
-	if b.cropCount > 0 {
-		s, ok := b.r.(io.Seeker)
+	if c.cropCount > 0 {
+		s, ok := c.r.(io.Seeker)
 		if !ok {
 			return errors.New("re-cropping not supported for non-io.Seekers")
 		}
 		s.Seek(0, io.SeekStart)
 	}
-	b.cropCount++
+	c.cropCount++
 
-	return BMPCrop(b.r, cropArea, out)
+	return BMPCrop(c.r, cropArea, out)
 }
 
 func BMPCrop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
-
 	// Load BMP header bytes and significant content
 	hdr, err := decodeConfig(r)
 	if err != nil {
