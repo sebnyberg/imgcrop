@@ -1,4 +1,4 @@
-module github.com/sebnyberg/imgcut
+module github.com/sebnyberg/imgcrop
 
 go 1.19
 
