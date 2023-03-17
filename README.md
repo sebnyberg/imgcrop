@@ -13,6 +13,7 @@ Areas of interest:
 3. Seekable compressed stream (zstd)
 4. io_uring
 5. mmap and madvise
+6. performance of existing libraries
 
 ### Image file format 
 
@@ -42,7 +43,9 @@ I haven't had a usecase for io_uring yet so looking forward to learning what it 
 
 Additionally, `madvise(2)` and in particular `MADV_SEQUENTIAL` can inform the kernel of the sequential nature of reading image contents.
 
-## Downloading an image to test with
+## Pre-requisites
+
+To run these benchmarks, a large image and `libvips` is required.
 
 ESA has some amazing images of space over at <https://esahubble.org/images/>.
 
@@ -52,18 +55,14 @@ Tests will fail unless you first download one of these and put it at `./testdata
 curl -o ./testdata/img.tiff https://esahubble.org/media/archives/images/original/heic0707a.tif
 ```
 
-## Cutting a bitmap
+For `libvips` installation instructions, see <https://github.com/davidbyttow/govips>.
 
-The goal here is to cut a bitmap from disk without 
+## Results
 
-Easy. Just use the stdlib.
+### Cutting a bitmap
 
-To get the BMP header, use unsafe and link in the header parser from `x/images/bmp` like a lad:
+TODO (done but not documented).
 
-```shell
-//go:linkname decodeConfig golang.org/x/image/bmp.decodeConfig
-func decodeConfig(r io.Reader) (config image.Config, bitsPerPixel int, topDown bool, allowAlpha bool, err error)
-```
+### Cutting with libvips
 
-`decodeConfig` reads the header, advancing the reader position. For repeatedly cropping 
 

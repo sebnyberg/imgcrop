@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"os"
 
-	"github.com/sebnyberg/imgcut"
+	"github.com/sebnyberg/imgcrop"
 	"golang.org/x/image/bmp"
 )
 
@@ -27,12 +27,10 @@ func main() {
 	dx := 16000
 	dy := 1000
 	for i := 0; ; i++ {
-		f.Seek(0, 0) // reset
-		bb := imgcut.NewBMP(f)
 		offx := rand.Intn(width - dx)
 		offy := rand.Intn(height - dy)
 		rect := image.Rect(offx, offy, offx+dx, offy+dy)
-		err = bb.Cut(rect, io.Discard)
+		err = imgcrop.BMPCrop(f, rect, io.Discard)
 		if err != nil {
 			log.Fatalln(err)
 		}

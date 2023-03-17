@@ -1,4 +1,4 @@
-package imgcut
+package imgcrop
 
 import (
 	"encoding/binary"
@@ -46,7 +46,7 @@ func (b *BMPMultiCropper) Crop(cropArea image.Rectangle, out io.Writer) error {
 func BMPCrop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 
 	// Load BMP header bytes and significant content
-	hdr, err := decodeConfig(b.r)
+	hdr, err := decodeConfig(r)
 	if err != nil {
 		return err
 	}
@@ -80,13 +80,13 @@ func BMPCrop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 
 	// Seek if possible, otherwise copy to discard
 	var seek func(off int) (n int64, err error)
-	if s, ok := b.r.(io.Seeker); ok {
+	if s, ok := r.(io.Seeker); ok {
 		seek = func(off int) (n int64, err error) {
 			return s.Seek(int64(off), io.SeekCurrent)
 		}
 	} else {
 		seek = func(off int) (n int64, err error) {
-			return io.CopyN(io.Discard, b.r, int64(off))
+			return io.CopyN(io.Discard, r, int64(off))
 		}
 	}
 
@@ -120,7 +120,7 @@ func BMPCrop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 		}
 
 		// Write middle part with padding
-		n, err := io.CopyN(out, b.r, int64(mid))
+		n, err := io.CopyN(out, r, int64(mid))
 		if err != nil || n != int64(mid) {
 			return err
 		}
