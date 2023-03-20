@@ -46,9 +46,16 @@ func VipsCrop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	_ = img
-	// var params vips.ExportParams
-	// params.
+	x0 := cropArea.Min.X
+	y0 := cropArea.Min.Y
+	x1 := cropArea.Max.X
+	y1 := cropArea.Max.Y
+	dx := x1 - x0
+	dy := y1 - y0
+	err = img.ExtractArea(x0, y0, dx, dy)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

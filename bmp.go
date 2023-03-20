@@ -45,7 +45,7 @@ func (c *BMPMultiCropper) Crop(cropArea image.Rectangle, out io.Writer) error {
 
 func BMPCrop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 	// Load BMP header bytes and significant content
-	hdr, err := decodeConfig(r)
+	hdr, err := bmpDecodeHeader(r)
 	if err != nil {
 		return err
 	}
@@ -64,13 +64,13 @@ func BMPCrop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 	}
 
 	// Create updated BMP header with crop dimensions
-	totalSize := (hdr.bitsPerPixel/8)*(cropArea.Dx()*cropArea.Dy()) + len(hdr.header)
+	totalSize := (hdr.bitsPerPixel/8)*(cropArea.Dx()*cropArea.Dy()) + len(hdr.headerBytes)
 	width := cropArea.Dx()
 	height := cropArea.Dy()
-	binary.LittleEndian.PutUint32(hdr.header[2:6], uint32(totalSize))
-	binary.LittleEndian.PutUint32(hdr.header[18:22], uint32(width))
-	binary.LittleEndian.PutUint32(hdr.header[22:26], uint32(height))
-	_, err = out.Write(hdr.header)
+	binary.LittleEndian.PutUint32(hdr.headerBytes[2:6], uint32(totalSize))
+	binary.LittleEndian.PutUint32(hdr.headerBytes[18:22], uint32(width))
+	binary.LittleEndian.PutUint32(hdr.headerBytes[22:26], uint32(height))
+	_, err = out.Write(hdr.headerBytes)
 	if err != nil {
 		return err
 	}
@@ -138,27 +138,26 @@ func BMPCrop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 	return nil
 }
 
-func readUint16(b []byte) uint16 {
-	return uint16(b[0]) | uint16(b[1])<<8
-}
-
-func readUint32(b []byte) uint32 {
-	return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
-}
-
-type decodeResult struct {
+type bmpDecodeResult struct {
 	config       image.Config
 	bitsPerPixel int
 	topDown      bool
 	allowAlpha   bool
-	header       []byte
+	headerBytes  []byte
 	offset       uint32
 }
 
-// decodeConfig was shamelessly copied from 'x/image/bmp' and edited for the
+// bmpDecodeHeader was shamelessly copied from 'x/image/bmp' and edited for the
 // usecase in this repo. Unlike the stdlib implementation, the header and
 // palette bytes are retained so that they can be re-written to cropped images.
-func decodeConfig(r io.Reader) (res decodeResult, err error) {
+func bmpDecodeHeader(r io.Reader) (res bmpDecodeResult, err error) {
+	readUint16 := func(b []byte) uint16 {
+		return uint16(b[0]) | uint16(b[1])<<8
+	}
+	readUint32 := func(b []byte) uint32 {
+		return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
+	}
+
 	// We only support those BMP images with one of the following DIB headers:
 	// - BITMAPINFOHEADER (40 bytes)
 	// - BITMAPV4HEADER (108 bytes)
@@ -169,7 +168,7 @@ func decodeConfig(r io.Reader) (res decodeResult, err error) {
 		v4InfoHeaderLen = 108
 		v5InfoHeaderLen = 124
 	)
-	var empty decodeResult
+	var empty bmpDecodeResult
 	var b [2048]byte
 	if _, err := io.ReadFull(r, b[:fileHeaderLen+4]); err != nil {
 		if err == io.EOF {
@@ -182,7 +181,7 @@ func decodeConfig(r io.Reader) (res decodeResult, err error) {
 	}
 	offset := readUint32(b[10:14])
 	res.offset = offset
-	res.header = b[:offset]
+	res.headerBytes = b[:offset]
 	infoLen := readUint32(b[14:18])
 	if infoLen != infoHeaderLen && infoLen != v4InfoHeaderLen && infoLen != v5InfoHeaderLen {
 		return empty, errors.New("unsupported")

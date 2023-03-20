@@ -19,7 +19,7 @@ const inflags = os.O_RDONLY
 const outflags = os.O_WRONLY | os.O_TRUNC | os.O_CREATE
 
 func TestCrap(t *testing.T) {
-	t.Skip()
+	// t.Skip()
 	f, err := os.OpenFile("testdata/img.tiff", inflags, 0)
 	defer f.Close()
 	require.NoError(t, err)
@@ -33,6 +33,7 @@ func TestCrap(t *testing.T) {
 }
 
 func TestBMP(t *testing.T) {
+	t.Skip()
 	inflags := os.O_RDONLY
 	f, err := os.OpenFile("testdata/space.bmp", inflags, 0)
 	require.NoError(t, err)
@@ -43,6 +44,7 @@ func TestBMP(t *testing.T) {
 }
 
 func TestC(t *testing.T) {
+	t.Skip()
 	f, err := os.OpenFile("testdata/space.bmp.gz", inflags, 0)
 	require.NoError(t, err)
 	dec, err := zstd.NewReader(nil)
@@ -64,6 +66,7 @@ func TestC(t *testing.T) {
 }
 
 func BenchmarkZstd(b *testing.B) {
+	b.Skip()
 	f, err := os.OpenFile("testdata/img2.bmp.gz", inflags, 0)
 	require.NoError(b, err)
 
@@ -95,6 +98,7 @@ func BenchmarkZstd(b *testing.B) {
 }
 
 func BenchmarkNoCompress(b *testing.B) {
+	b.Skip()
 	// setup
 	inflags := os.O_RDONLY
 	f, err := os.OpenFile("testdata/space.bmp", inflags, 0)

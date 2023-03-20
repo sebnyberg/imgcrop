@@ -14,7 +14,7 @@ import (
 
 func main() {
 	inflags := os.O_RDONLY
-	f, err := os.OpenFile("testdata/img.bmp", inflags, 0)
+	f, err := os.OpenFile("testdata/space.bmp", inflags, 0)
 	if err != nil {
 		log.Fatalln(err)
 	}
