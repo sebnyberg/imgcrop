@@ -1,4 +1,4 @@
-package imgcrop
+package vipsx
 
 import (
 	"errors"
@@ -6,21 +6,21 @@ import (
 	"io"
 	"sync"
 
-	vips "github.com/davidbyttow/govips/v2/vips"
+	"github.com/davidbyttow/govips/v2/vips"
 )
 
-type VipsCropper struct {
+type Cropper struct {
 	cropCount int
 	mtx       sync.Mutex
 	r         io.Reader
 }
 
-func NewVipsCropper(r io.Reader) *VipsCropper {
-	return &VipsCropper{r: r}
+func NewCropper(r io.Reader) *Cropper {
+	return &Cropper{r: r}
 }
 
 // todo(sn): this is copied from BMP cropper. Not great.
-func (c *VipsCropper) Crop(cropArea image.Rectangle, out io.Writer) error {
+func (c *Cropper) Crop(cropArea image.Rectangle, out io.Writer) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
@@ -35,10 +35,10 @@ func (c *VipsCropper) Crop(cropArea image.Rectangle, out io.Writer) error {
 	}
 	c.cropCount++
 
-	return VipsCrop(c.r, cropArea, out)
+	return Crop(c.r, cropArea, out)
 }
 
-func VipsCrop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
+func Crop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 	vips.Startup(nil)
 	defer vips.Shutdown()
 
@@ -56,6 +56,6 @@ func VipsCrop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-
+	img.ExportTiff(nil)
 	return nil
 }

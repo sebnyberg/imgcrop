@@ -1,4 +1,4 @@
-package imgcrop
+package bmpx
 
 import (
 	"encoding/binary"
@@ -7,25 +7,23 @@ import (
 	"image/color"
 	"io"
 	"sync"
-	_ "unsafe"
 
 	"golang.org/x/image/bmp"
 )
 
-var _ Cropper = new(BMPMultiCropper)
 var _ any = bmp.Decode
 
-type BMPMultiCropper struct {
+type Cropper struct {
 	cropCount int
 	mtx       sync.Mutex
 	r         io.Reader
 }
 
-func NewBMPMultiCropper(r io.Reader) *BMPMultiCropper {
-	return &BMPMultiCropper{r: r}
+func NewCropper(r io.Reader) *Cropper {
+	return &Cropper{r: r}
 }
 
-func (c *BMPMultiCropper) Crop(cropArea image.Rectangle, out io.Writer) error {
+func (c *Cropper) Crop(cropArea image.Rectangle, out io.Writer) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
@@ -40,42 +38,42 @@ func (c *BMPMultiCropper) Crop(cropArea image.Rectangle, out io.Writer) error {
 	}
 	c.cropCount++
 
-	return BMPCrop(c.r, cropArea, out)
+	return Crop(c.r, cropArea, out)
 }
 
-func BMPCrop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
+func Crop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 	// Load BMP header bytes and significant content
-	hdr, err := bmpDecodeHeader(r)
+	hdr, err := DecodeHeader(r)
 	if err != nil {
 		return err
 	}
-	if hdr.topDown {
+	if hdr.TopDown {
 		return errors.New(".BMP: topDown not supported")
 	}
-	if hdr.allowAlpha {
+	if hdr.AllowAlpha {
 		return errors.New(".BMP: allowAlpha not supported")
 	}
 
 	// Find / validate crop area
-	dim := image.Rect(0, 0, hdr.config.Width, hdr.config.Height)
+	dim := image.Rect(0, 0, hdr.Config.Width, hdr.Config.Height)
 	cropArea = dim.Intersect(cropArea)
 	if cropArea.Empty() {
 		return errors.New("crop area empty or out of bounds")
 	}
 
 	// Create updated BMP header with crop dimensions
-	totalSize := (hdr.bitsPerPixel/8)*(cropArea.Dx()*cropArea.Dy()) + len(hdr.headerBytes)
+	totalSize := (hdr.BitsPerPixel/8)*(cropArea.Dx()*cropArea.Dy()) + len(hdr.HeaderBytes)
 	width := cropArea.Dx()
 	height := cropArea.Dy()
-	binary.LittleEndian.PutUint32(hdr.headerBytes[2:6], uint32(totalSize))
-	binary.LittleEndian.PutUint32(hdr.headerBytes[18:22], uint32(width))
-	binary.LittleEndian.PutUint32(hdr.headerBytes[22:26], uint32(height))
-	_, err = out.Write(hdr.headerBytes)
+	binary.LittleEndian.PutUint32(hdr.HeaderBytes[2:6], uint32(totalSize))
+	binary.LittleEndian.PutUint32(hdr.HeaderBytes[18:22], uint32(width))
+	binary.LittleEndian.PutUint32(hdr.HeaderBytes[22:26], uint32(height))
+	_, err = out.Write(hdr.HeaderBytes)
 	if err != nil {
 		return err
 	}
 
-	bytesPerPixel := hdr.bitsPerPixel / 8
+	bytesPerPixel := hdr.BitsPerPixel / 8
 
 	// Seek if possible, otherwise copy to discard
 	var seek func(off int) (n int64, err error)
@@ -94,8 +92,8 @@ func BMPCrop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 	}
 
 	// Skip uncropped last rows (recall: bmp is bottom-up in this case)
-	rowBytes := byteWidth(hdr.bitsPerPixel, hdr.config.Width)
-	skipBytes := rowBytes * (hdr.config.Height - cropArea.Max.Y)
+	rowBytes := byteWidth(hdr.BitsPerPixel, hdr.Config.Width)
+	skipBytes := rowBytes * (hdr.Config.Height - cropArea.Max.Y)
 	if _, err := seek(skipBytes); err != nil {
 		return err
 	}
@@ -108,7 +106,7 @@ func BMPCrop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 	left := bytesPerPixel * cropArea.Min.X
 	mid := cropArea.Dx() * bytesPerPixel
 	right := rowBytes - (mid + left)
-	wantWidth := byteWidth(hdr.bitsPerPixel, cropArea.Dx())
+	wantWidth := byteWidth(hdr.BitsPerPixel, cropArea.Dx())
 	padding := make([]byte, wantWidth-mid)
 
 	for dy := 1; dy <= cropArea.Dy(); dy++ {
@@ -138,19 +136,19 @@ func BMPCrop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 	return nil
 }
 
-type bmpDecodeResult struct {
-	config       image.Config
-	bitsPerPixel int
-	topDown      bool
-	allowAlpha   bool
-	headerBytes  []byte
-	offset       uint32
+type DecodeResult struct {
+	Config       image.Config
+	BitsPerPixel int
+	TopDown      bool
+	AllowAlpha   bool
+	HeaderBytes  []byte
+	ImageOffset  uint32
 }
 
 // bmpDecodeHeader was shamelessly copied from 'x/image/bmp' and edited for the
 // usecase in this repo. Unlike the stdlib implementation, the header and
 // palette bytes are retained so that they can be re-written to cropped images.
-func bmpDecodeHeader(r io.Reader) (res bmpDecodeResult, err error) {
+func DecodeHeader(r io.Reader) (res DecodeResult, err error) {
 	readUint16 := func(b []byte) uint16 {
 		return uint16(b[0]) | uint16(b[1])<<8
 	}
@@ -168,7 +166,7 @@ func bmpDecodeHeader(r io.Reader) (res bmpDecodeResult, err error) {
 		v4InfoHeaderLen = 108
 		v5InfoHeaderLen = 124
 	)
-	var empty bmpDecodeResult
+	var empty DecodeResult
 	var b [2048]byte
 	if _, err := io.ReadFull(r, b[:fileHeaderLen+4]); err != nil {
 		if err == io.EOF {
@@ -180,8 +178,8 @@ func bmpDecodeHeader(r io.Reader) (res bmpDecodeResult, err error) {
 		return empty, errors.New("bmp: invalid format")
 	}
 	offset := readUint32(b[10:14])
-	res.offset = offset
-	res.headerBytes = b[:offset]
+	res.ImageOffset = offset
+	res.HeaderBytes = b[:offset]
 	infoLen := readUint32(b[14:18])
 	if infoLen != infoHeaderLen && infoLen != v4InfoHeaderLen && infoLen != v5InfoHeaderLen {
 		return empty, errors.New("unsupported")
@@ -195,7 +193,7 @@ func bmpDecodeHeader(r io.Reader) (res bmpDecodeResult, err error) {
 	width := int(int32(readUint32(b[18:22])))
 	height := int(int32(readUint32(b[22:26])))
 	if height < 0 {
-		height, res.topDown = -height, true
+		height, res.TopDown = -height, true
 	}
 	if width < 0 || height < 0 {
 		return empty, errors.New("unsupported")
@@ -229,17 +227,17 @@ func bmpDecodeHeader(r io.Reader) (res bmpDecodeResult, err error) {
 			// Every 4th byte is padding.
 			pcm[i] = color.RGBA{b[pre+4*i+2], b[pre+4*i+1], b[pre+4*i+0], 0xFF}
 		}
-		res.config = image.Config{ColorModel: pcm, Width: width, Height: height}
-		res.bitsPerPixel = 8
-		res.allowAlpha = false
+		res.Config = image.Config{ColorModel: pcm, Width: width, Height: height}
+		res.BitsPerPixel = 8
+		res.AllowAlpha = false
 		return res, nil
 	case 24:
 		if offset != fileHeaderLen+infoLen {
 			return empty, errors.New("unsupported")
 		}
-		res.config = image.Config{ColorModel: color.RGBAModel, Width: width, Height: height}
-		res.bitsPerPixel = 24
-		res.allowAlpha = false
+		res.Config = image.Config{ColorModel: color.RGBAModel, Width: width, Height: height}
+		res.BitsPerPixel = 24
+		res.AllowAlpha = false
 		return res, nil
 	case 32:
 		if offset != fileHeaderLen+infoLen {
@@ -265,10 +263,10 @@ func bmpDecodeHeader(r io.Reader) (res bmpDecodeResult, err error) {
 		// This Go package does not support ICO files and the (infoLen >
 		// infoHeaderLen) condition distinguishes BITMAPINFOHEADER (40 bytes)
 		// vs later (larger) headers.
-		res.allowAlpha = infoLen > infoHeaderLen
-		res.config = image.Config{ColorModel: color.RGBAModel, Width: width, Height: height}
-		res.bitsPerPixel = 32
-		res.allowAlpha = infoLen > infoHeaderLen
+		res.AllowAlpha = infoLen > infoHeaderLen
+		res.Config = image.Config{ColorModel: color.RGBAModel, Width: width, Height: height}
+		res.BitsPerPixel = 32
+		res.AllowAlpha = infoLen > infoHeaderLen
 		return res, nil
 	}
 	return empty, errors.New("unsupported")

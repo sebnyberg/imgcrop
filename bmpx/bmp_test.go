@@ -1,4 +1,4 @@
-package imgcrop
+package bmpx
 
 import (
 	"fmt"
@@ -12,25 +12,10 @@ import (
 	"github.com/klauspost/compress/zstd"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/image/bmp"
-	"golang.org/x/image/tiff"
 )
 
 const inflags = os.O_RDONLY
 const outflags = os.O_WRONLY | os.O_TRUNC | os.O_CREATE
-
-func TestCrap(t *testing.T) {
-	// t.Skip()
-	f, err := os.OpenFile("testdata/img.tiff", inflags, 0)
-	defer f.Close()
-	require.NoError(t, err)
-	outf, err := os.OpenFile("testdata/space.bmp", outflags, 0644)
-	defer outf.Close()
-	require.NoError(t, err)
-	img, err := tiff.Decode(f)
-	require.NoError(t, err)
-	err = bmp.Encode(outf, img)
-	require.NoError(t, err)
-}
 
 func TestBMP(t *testing.T) {
 	t.Skip()
@@ -39,11 +24,11 @@ func TestBMP(t *testing.T) {
 	require.NoError(t, err)
 	outf, err := os.OpenFile("testdata/cut.bmp", outflags, 0640)
 	rect := image.Rect(24500, 10000, 24900, 11000)
-	err = BMPCrop(f, rect, outf)
+	err = Crop(f, rect, outf)
 	outf.Close()
 }
 
-func TestC(t *testing.T) {
+func TestBmpZstd(t *testing.T) {
 	t.Skip()
 	f, err := os.OpenFile("testdata/space.bmp.gz", inflags, 0)
 	require.NoError(t, err)
@@ -89,7 +74,7 @@ func BenchmarkZstd(b *testing.B) {
 					offx := rand.Intn(width - dx)
 					offy := rand.Intn(height - dy)
 					rect := image.Rect(offx, offy, offx+dx, offy+dy)
-					err = BMPCrop(f, rect, io.Discard)
+					err = Crop(f, rect, io.Discard)
 					require.NoError(b, err)
 				}
 			})
@@ -116,7 +101,7 @@ func BenchmarkNoCompress(b *testing.B) {
 					offx := rand.Intn(width - dx)
 					offy := rand.Intn(height - dy)
 					rect := image.Rect(offx, offy, offx+dx, offy+dy)
-					err = BMPCrop(f, rect, io.Discard)
+					err = Crop(f, rect, io.Discard)
 					require.NoError(b, err)
 				}
 			})
