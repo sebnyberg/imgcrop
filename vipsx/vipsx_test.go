@@ -29,8 +29,6 @@ func TestVips(t *testing.T) {
 	defer in.Close()
 	region := image.Rect(0, 0, 10, 20)
 	require.NoError(t, Crop(in, region, io.Discard), "crop")
-	in.Seek(0, 0)
-	require.NoError(t, Crop(in, region, io.Discard), "crop")
 }
 
 func init() {

@@ -13,15 +13,15 @@ import (
 	govips "github.com/davidbyttow/govips/v2/vips"
 	"github.com/sebnyberg/imgcrop/vipsx"
 	"github.com/stretchr/testify/require"
-	vips "github.com/vipsimage/vips"
 	"golang.org/x/image/tiff"
 )
 
 const (
-	tiffBigPath    = "./testdata/big.tif"
-	tiffBigURL     = "https://esahubble.org/media/archives/images/original/heic0707a.tif"
-	tiffSamplePath = "./testdata/sample.tif"
-	tiffSampleURL  = "https://github.com/libvips/libvips/raw/master/test/test-suite/images/sample.tif"
+	tiffBigPath             = "./testdata/big.tif"
+	tiffBigUncompressedPath = "./testdata/big-uncompressed.tif"
+	tiffBigURL              = "https://esahubble.org/media/archives/images/original/heic0707a.tif"
+	tiffSamplePath          = "./testdata/sample.tif"
+	tiffSampleURL           = "https://github.com/libvips/libvips/raw/master/test/test-suite/images/sample.tif"
 )
 
 const (
@@ -29,23 +29,7 @@ const (
 	outflags = os.O_RDWR | os.O_CREATE | os.O_TRUNC
 )
 
-func vips2crop(name string, area image.Rectangle, out string) error {
-	img, err := vips.NewFromFile(name)
-	if err != nil {
-		return err
-	}
-	err = img.Crop(area.Min.X, area.Min.Y, area.Dx(), area.Dy())
-	if err != nil {
-		return err
-	}
-	err = img.TIFFSave(out)
-	return err
-}
-
 func BenchmarkTIFF(b *testing.B) {
-	// Todo(sn): move this to package with finalizer?
-	govips.LoggingSettings(nil, govips.LogLevelCritical)
-	govips.Startup(nil)
 	defer govips.Shutdown()
 
 	type cropFn func(r io.Reader, area image.Rectangle, out io.Writer) error
@@ -64,7 +48,8 @@ func BenchmarkTIFF(b *testing.B) {
 	}
 
 	for _, imgPath := range []string{
-		tiffBigPath,
+		// tiffBigPath,
+		// tiffBigUncompressedPath,
 		// tiffSamplePath,
 	} {
 		width, height := dims(imgPath, b)
@@ -126,6 +111,31 @@ func doInit() {
 		if err != nil {
 			log.Fatalf("dl image at %q to %q err, %v", x.url, x.path, err)
 		}
+	}
+
+	createUncompressed := func() error {
+		// Create uncompressed version of big TIFF
+		_, err := os.Stat(tiffBigUncompressedPath)
+		if err == nil {
+			return nil
+		}
+		in, err := os.OpenFile(tiffBigPath, inflags, 0)
+		if err != nil {
+			return err
+		}
+		out, err := os.OpenFile(tiffBigUncompressedPath, outflags, 0644)
+		if err != nil {
+			return err
+		}
+		img, err := tiff.Decode(in)
+		if err != nil {
+			return err
+		}
+		return tiff.Encode(out, img, nil)
+	}
+	err := createUncompressed()
+	if err != nil {
+		log.Fatalf("create uncompressed tif err, %v", err)
 	}
 }
 

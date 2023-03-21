@@ -35,11 +35,10 @@ func (c *Cropper) Crop(cropArea image.Rectangle, out io.Writer) error {
 	}
 	c.cropCount++
 
-	return Crop(c.r, cropArea, out)
+	return GoVipsCrop(c.r, cropArea, out)
 }
 
-func Crop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
-
+func GoVipsCrop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 	img, err := vips.NewImageFromReader(r)
 	if err != nil {
 		return err
@@ -56,4 +55,9 @@ func Crop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 	}
 	img.ExportTiff(nil)
 	return nil
+}
+
+func init() {
+	vips.LoggingSettings(nil, vips.LogLevelCritical)
+	vips.Startup(nil)
 }

@@ -61,7 +61,11 @@ Decompression using e.g. zstd is heavily performance optimized, making use of ve
 
 ## Image manipulation libraries
 
-### libvips
+### govips
+
+[govips](https://github.com/davidbyttow/govips) provides Go bindings to [libvips](https://github.com/libvips/libvips). Sadly, it serializes file contents into byte slices before passing the data to vips, which offsets any advantage given by using vips to begin with. Cropping a large image is roughly 100'000 times slower than the cropping I implemented Go with e.g. BMP.
+
+<!-- [vipsimage/vips](https://github.com/vipsimage/vips) is much better. It allows for passing the input and output image path as a string rather than serialized byte array, allowing vips to efficiently read from the file. It seems however, perhaps through no fault of this library, that vips just isn't great for cropping. -->
 
 ## Compression
 
