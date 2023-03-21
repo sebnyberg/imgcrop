@@ -39,8 +39,6 @@ func (c *Cropper) Crop(cropArea image.Rectangle, out io.Writer) error {
 }
 
 func Crop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
-	vips.Startup(nil)
-	defer vips.Shutdown()
 
 	img, err := vips.NewImageFromReader(r)
 	if err != nil {

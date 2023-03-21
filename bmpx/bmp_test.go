@@ -46,7 +46,7 @@ func TestBmpZstd(t *testing.T) {
 	defer outf.Close()
 
 	rect := image.Rect(24500, 10000, 24900, 11000)
-	err = BMPCrop(f, rect, io.Discard)
+	err = Crop(f, rect, io.Discard)
 	require.NoError(t, err)
 }
 

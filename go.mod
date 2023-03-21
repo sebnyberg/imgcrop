@@ -12,6 +12,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davidbyttow/govips/v2 v2.11.0 // indirect
 	github.com/google/btree v1.1.2 // indirect
+	github.com/vipsimage/vips v0.0.5 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect

@@ -11,25 +11,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const tiffBigPath = "./testdata/big.tif"
-const tiffBigURL = "https://esahubble.org/media/archives/images/original/heic0707a.tif"
-const tiffSamplePath = "./testdata/sample.tif"
-const tiffSampleURL = "https://github.com/libvips/libvips/blob/master/test/test-suite/images/sample.tif"
-const inflags = os.O_RDONLY
-const outflags = os.O_RDWR | os.O_CREATE | os.O_TRUNC
+const (
+	tiffBigPath    = "./testdata/big.tif"
+	tiffBigURL     = "https://esahubble.org/media/archives/images/original/heic0707a.tif"
+	tiffSamplePath = "./testdata/sample.tif"
+	tiffSampleURL  = "https://github.com/libvips/libvips/raw/master/test/test-suite/images/sample.tif"
+)
+
+const (
+	inflags  = os.O_RDONLY
+	outflags = os.O_RDWR | os.O_CREATE | os.O_TRUNC
+)
 
 func TestVips(t *testing.T) {
-	in, err := os.OpenFile("./testdata/sample.tif", inflags, 0)
+	in, err := os.OpenFile(tiffBigPath, inflags, 0)
 	require.NoError(t, err)
-	// defer in.Close()
+	defer in.Close()
 	region := image.Rect(0, 0, 10, 20)
-	out, err := os.OpenFile("./testdata/sample-cropped.tif", outflags, 0644)
-	require.NoError(t, err)
-	// defer out.Close()
-	require.NoError(t, Crop(in, region, out), "crop")
+	require.NoError(t, Crop(in, region, io.Discard), "crop")
+	in.Seek(0, 0)
+	require.NoError(t, Crop(in, region, io.Discard), "crop")
 }
 
 func init() {
+	doInit()
+}
+
+func doInit() {
 	for _, x := range []struct {
 		url  string
 		path string
