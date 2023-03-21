@@ -4,14 +4,14 @@ Exploration into cropping large images.
 
 ## Background and goals
 
-The background to this exploration is a need for cropping large (100MB+) images in a fashion that keeps the memory and CPU footprint as small as possible. The hidden proprietary problem driving this exploration is to support high-performance, lossless, concurrent sampling (cropping) of large images for Data Science purposes.
+The background to this exploration is a goal to enable cropping of hundreds of large (1GiB+) images in parallel while keeping memory and CPU footprint as small as possible. Ideally runnable on a nearly free VM. The hidden proprietary problem driving this exploration is to support high-performance, lossless, concurrent sampling (cropping) for ML model training purposes.
 
 A peripheral goal is to support stream (forward-only) cropping as the image is being recieved over e.g. a TCP socket. Stream-based cropping is applicable to cropping of files too; minimizing seeks helps drastically with performance.
 
 Areas of interest:
 
 * Image file formats
-* Various performance concerns
+* Various performance ideas and concerns 
 * Image manipulation libraries
 * Compression & seekable compressed formats
 * Kernel I/O optimization
@@ -59,13 +59,23 @@ Having less data is a very big advantage. Depending on the type of image, lossle
 
 Decompression using e.g. zstd is heavily performance optimized, making use of vectorized instructions such as SVE / AVX. So a minimum requirement to beat a compressed stream would be to not parse pixels in any way, utilizing similar vector instructions for copying data. In theory, it may even be possible to perform these copies in kernel space, since the userspace program does not care about the contents of the bytes, only their offsets in the original file.
 
+### Scan sharing
+
+To limit memory usage when multiple clients request crops from the same image, a sort of [scan sharing](https://www.ibm.com/docs/en/db2/11.1?topic=methods-scan-sharing) could be employed. Either incoming crop requests are batched, or crops jump into ongoing scans in an online fashion. An online delta-interval-based scan is performed over the image, and byte slice references are sent to consumers one by one. AFAIK, the Go library does not manipulate byte arrays handed over to socket writes, so it should be fine to share byte slice references across consumers.
+
 ## Image manipulation libraries
+
+### stdlib
+
+It is possible to crop using stdlib's subImage interface. However, this also requires an image.Image object, which is an image serialized in memory, which is not reasonable for hundreds of 1GiB+ images.
 
 ### govips
 
 [govips](https://github.com/davidbyttow/govips) provides Go bindings to [libvips](https://github.com/libvips/libvips). Sadly, it serializes file contents into byte slices before passing the data to vips, which offsets any advantage given by using vips to begin with. Cropping a large image is roughly 100'000 times slower than the cropping I implemented Go with e.g. BMP.
 
-<!-- [vipsimage/vips](https://github.com/vipsimage/vips) is much better. It allows for passing the input and output image path as a string rather than serialized byte array, allowing vips to efficiently read from the file. It seems however, perhaps through no fault of this library, that vips just isn't great for cropping. -->
+### vipsimage/vips
+
+[vipsimage/vips](https://github.com/vipsimage/vips) is more to my liking. It does not require vips startup/stop, and it allows for passing the input and output image path as a string rather than serialized byte array, allowing vips to efficiently read from the file. It seems however, perhaps through no fault of the bindings, that vips just isn't great for cropping.
 
 ## Compression
 
