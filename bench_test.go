@@ -46,6 +46,7 @@ func TestA(t *testing.T) {
 	var enc png.Encoder
 	require.NoError(t, err)
 	_ = img
+	_ = enc
 }
 
 func BenchmarkTIFF(b *testing.B) {
@@ -99,7 +100,7 @@ func BenchmarkTIFF(b *testing.B) {
 								if cropper.name == "vipsimage" {
 									vipsx.VipsImageCrop(imgPath, rect, "testdata/big-cropped.tif")
 								} else {
-									err = cropper.fn(f, rect, io.Discard)
+									err = cropper.fn(f, io.Discard, rect)
 									require.NoError(b, err)
 									f.Seek(0, io.SeekStart)
 								}
