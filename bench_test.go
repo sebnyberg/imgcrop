@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/sebnyberg/imgcrop/internal/exp/vipsx"
 	"github.com/stretchr/testify/require"
@@ -40,10 +41,17 @@ func TestA(t *testing.T) {
 	// enc.CompressionLevel = png.BestSpeed
 	// err = enc.Encode(out, img)
 	// require.NoError(t, err)
-	f, err := os.OpenFile("testdata/big.tif", inflags, 0)
+	defer func(start time.Time) {
+		t.Fatalf("elapsed: %v", time.Since(start))
+	}(time.Now())
+	f, err := os.OpenFile("testdata/big-uncompressed.tif", inflags, 0)
 	require.NoError(t, err)
 	img, err := tiff.Decode(f)
 	var enc png.Encoder
+	enc.CompressionLevel = png.BestSpeed
+	out, err := os.OpenFile("testdata/big.png", outflags, 0644)
+	require.NoError(t, err)
+	err = enc.Encode(out, img)
 	require.NoError(t, err)
 	_ = img
 	_ = enc

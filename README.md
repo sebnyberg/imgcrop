@@ -4,6 +4,10 @@ Library for efficient cropping of very large images.
 
 See [Design Doc](./docs/DESIGN.md) for background and design considerations.
 
+## Stability
+
+:warning: This package is under development and in flux. :warning:
+
 ## Installation
 
 ```shell
@@ -73,4 +77,8 @@ ok  	github.com/sebnyberg/imgcrop/bmpx	15.100s
 ## Examples
 
 * [Cropping PNG (terrible perf)](./examples/png.go)
+
+## Testing
+
+This library has been tested by a friend externally, trust me. :eyes:
 
