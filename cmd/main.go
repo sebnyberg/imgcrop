@@ -8,13 +8,13 @@ import (
 	"math/rand"
 	"os"
 
-	"github.com/sebnyberg/imgcrop"
+	"github.com/sebnyberg/imgcrop/bmpx"
 	"golang.org/x/image/bmp"
 )
 
 func main() {
 	inflags := os.O_RDONLY
-	f, err := os.OpenFile("testdata/space.bmp", inflags, 0)
+	f, err := os.OpenFile("testdata/big.bmp", inflags, 0)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -30,7 +30,7 @@ func main() {
 		offx := rand.Intn(width - dx)
 		offy := rand.Intn(height - dy)
 		rect := image.Rect(offx, offy, offx+dx, offy+dy)
-		err = imgcrop.BMPCrop(f, rect, io.Discard)
+		err = bmpx.Crop(f, io.Discard, rect)
 		if err != nil {
 			log.Fatalln(err)
 		}

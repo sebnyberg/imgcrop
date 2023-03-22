@@ -3,47 +3,46 @@ package bmpx
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"image"
 	"image/color"
 	"io"
-	"sync"
-
-	"golang.org/x/image/bmp"
+	"os"
+	"path"
 )
 
-var _ any = bmp.Decode
-
-type Cropper struct {
-	cropCount int
-	mtx       sync.Mutex
-	r         io.Reader
-}
-
-func NewCropper(r io.Reader) *Cropper {
-	return &Cropper{r: r}
-}
-
-func (c *Cropper) Crop(cropArea image.Rectangle, out io.Writer) error {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-
-	// Guard against re-cropping of the same image unless it has been provided
-	// as an io.Seeker (can be reset)
-	if c.cropCount > 0 {
-		s, ok := c.r.(io.Seeker)
-		if !ok {
-			return errors.New("re-cropping not supported for non-io.Seekers")
-		}
-		s.Seek(0, io.SeekStart)
+// CropFile crops the provided region of the BMP found at srcPath to a BMP at
+// dstPath. For more info, see Crop().
+func CropFile(srcPath, dstPath string, region image.Rectangle) error {
+	srcPath = path.Clean(srcPath)
+	src, err := os.OpenFile(srcPath, os.O_RDONLY, 0)
+	if err != nil {
+		return fmt.Errorf("open file %q err, %w", srcPath, err)
 	}
-	c.cropCount++
-
-	return Crop(c.r, cropArea, out)
+	dst, err := os.OpenFile(dstPath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0640)
+	if err != nil {
+		return fmt.Errorf("open file %q err, %w", dstPath, err)
+	}
+	return Crop(src, dst, region)
 }
 
-func Crop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
+// Crop crops the provided region of the BMP found in the input stream to the
+// output stream.
+//
+// The input BMP must be bottom-up, no alpha, and uncompressed.
+//
+// Thanks to the simplicity of the BMP format, crop uses a very small amount of
+// memory (~8KiB).
+//
+// If src is an io.ReadSeeker, then the cropper will seek to skip pixels that
+// are outside the cropping region.
+//
+// Cropping complexity scales primarily with number of cropped rows, not
+// columns. Depending on the data and number of crops, it may make sense to
+// rotate the image accordingly.
+func Crop(src io.Reader, dst io.Writer, region image.Rectangle) error {
 	// Load BMP header bytes and significant content
-	hdr, err := DecodeHeader(r)
+	hdr, err := DecodeHeader(src)
 	if err != nil {
 		return err
 	}
@@ -56,19 +55,19 @@ func Crop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 
 	// Find / validate crop area
 	dim := image.Rect(0, 0, hdr.Config.Width, hdr.Config.Height)
-	cropArea = dim.Intersect(cropArea)
-	if cropArea.Empty() {
+	region = dim.Intersect(region)
+	if region.Empty() {
 		return errors.New("crop area empty or out of bounds")
 	}
 
 	// Create updated BMP header with crop dimensions
-	totalSize := (hdr.BitsPerPixel/8)*(cropArea.Dx()*cropArea.Dy()) + len(hdr.HeaderBytes)
-	width := cropArea.Dx()
-	height := cropArea.Dy()
+	totalSize := (hdr.BitsPerPixel/8)*(region.Dx()*region.Dy()) + len(hdr.HeaderBytes)
+	width := region.Dx()
+	height := region.Dy()
 	binary.LittleEndian.PutUint32(hdr.HeaderBytes[2:6], uint32(totalSize))
 	binary.LittleEndian.PutUint32(hdr.HeaderBytes[18:22], uint32(width))
 	binary.LittleEndian.PutUint32(hdr.HeaderBytes[22:26], uint32(height))
-	_, err = out.Write(hdr.HeaderBytes)
+	_, err = dst.Write(hdr.HeaderBytes)
 	if err != nil {
 		return err
 	}
@@ -77,13 +76,13 @@ func Crop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 
 	// Seek if possible, otherwise copy to discard
 	var seek func(off int) (n int64, err error)
-	if s, ok := r.(io.Seeker); ok {
+	if s, ok := src.(io.Seeker); ok {
 		seek = func(off int) (n int64, err error) {
 			return s.Seek(int64(off), io.SeekCurrent)
 		}
 	} else {
 		seek = func(off int) (n int64, err error) {
-			return io.CopyN(io.Discard, r, int64(off))
+			return io.CopyN(io.Discard, src, int64(off))
 		}
 	}
 
@@ -93,7 +92,7 @@ func Crop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 
 	// Skip uncropped last rows (recall: bmp is bottom-up in this case)
 	rowBytes := byteWidth(hdr.BitsPerPixel, hdr.Config.Width)
-	skipBytes := rowBytes * (hdr.Config.Height - cropArea.Max.Y)
+	skipBytes := rowBytes * (hdr.Config.Height - region.Max.Y)
 	if _, err := seek(skipBytes); err != nil {
 		return err
 	}
@@ -103,13 +102,13 @@ func Crop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 	// 4-byte aligned. This means that there may be extra bytes that are empty
 	// on each row that is being read, and that padding may need to be added to
 	// the row that is being written.
-	left := bytesPerPixel * cropArea.Min.X
-	mid := cropArea.Dx() * bytesPerPixel
+	left := bytesPerPixel * region.Min.X
+	mid := region.Dx() * bytesPerPixel
 	right := rowBytes - (mid + left)
-	wantWidth := byteWidth(hdr.BitsPerPixel, cropArea.Dx())
+	wantWidth := byteWidth(hdr.BitsPerPixel, region.Dx())
 	padding := make([]byte, wantWidth-mid)
 
-	for dy := 1; dy <= cropArea.Dy(); dy++ {
+	for dy := 1; dy <= region.Dy(); dy++ {
 		// Skip left
 		_, err := seek(left)
 		if err != nil {
@@ -117,11 +116,11 @@ func Crop(r io.Reader, cropArea image.Rectangle, out io.Writer) error {
 		}
 
 		// Write middle part with padding
-		n, err := io.CopyN(out, r, int64(mid))
+		n, err := io.CopyN(dst, src, int64(mid))
 		if err != nil || n != int64(mid) {
 			return err
 		}
-		_, err = out.Write(padding)
+		_, err = dst.Write(padding)
 		if err != nil {
 			return err
 		}

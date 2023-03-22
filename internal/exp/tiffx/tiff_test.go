@@ -25,14 +25,10 @@ func convToStdlibTiff(a, b string, t *testing.T) {
 }
 
 func TestTIFF(t *testing.T) {
-	// convToStdlibTiff("testdata/img.tiff", "testdata/uncompressed.tiff", t)
 	f, err := os.OpenFile("testdata/uncompressed.tiff", inflags, 0)
 	defer f.Close()
+	// WIP
 	require.NoError(t, err)
 	img, _ := tiff.Decode(f)
-	// zip.NewReader(, size int64)
 	_ = img
-	// a, err := tiffDecodeHeader(f)
-	// require.NoError(t, err)
-	// _ = a
 }

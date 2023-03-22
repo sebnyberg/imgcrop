@@ -24,7 +24,7 @@ func TestBMP(t *testing.T) {
 	require.NoError(t, err)
 	outf, err := os.OpenFile("testdata/cut.bmp", outflags, 0640)
 	rect := image.Rect(24500, 10000, 24900, 11000)
-	err = Crop(f, rect, outf)
+	err = Crop(f, outf, rect)
 	outf.Close()
 }
 
@@ -46,7 +46,7 @@ func TestBmpZstd(t *testing.T) {
 	defer outf.Close()
 
 	rect := image.Rect(24500, 10000, 24900, 11000)
-	err = Crop(f, rect, io.Discard)
+	err = Crop(f, io.Discard, rect)
 	require.NoError(t, err)
 }
 
@@ -74,7 +74,7 @@ func BenchmarkZstd(b *testing.B) {
 					offx := rand.Intn(width - dx)
 					offy := rand.Intn(height - dy)
 					rect := image.Rect(offx, offy, offx+dx, offy+dy)
-					err = Crop(f, rect, io.Discard)
+					err = Crop(f, io.Discard, rect)
 					require.NoError(b, err)
 				}
 			})
@@ -101,7 +101,7 @@ func BenchmarkNoCompress(b *testing.B) {
 					offx := rand.Intn(width - dx)
 					offy := rand.Intn(height - dy)
 					rect := image.Rect(offx, offy, offx+dx, offy+dy)
-					err = Crop(f, rect, io.Discard)
+					err = Crop(f, io.Discard, rect)
 					require.NoError(b, err)
 				}
 			})

@@ -3,15 +3,8 @@ package tiffx
 import (
 	"encoding/binary"
 	"errors"
-	"image"
 	"io"
 )
-
-type Cropper struct{}
-
-func (c *Cropper) Crop(region image.Rectangle, out io.Writer) error {
-	return nil
-}
 
 type DecodeResult struct {
 	ByteOrder binary.ByteOrder

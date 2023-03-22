@@ -23,17 +23,17 @@ Let's consider image file formats.
 
 There's JPEG (lossy) and PNG (lossless). Both work well for the web. 
 
-If the solution requires sending lossless images, then PNG is the best choice. If the data is too large to send as PNG, JPEG is likely the best choice. There are other nuances, such as the effect JPEG compression has on certain types of images, such as text-on-background versus pictures, but in general this decision holds true.
+If the data is too large to send as PNG, lossy JPEG is likely the best choice, and vice versa. There are other nuances, such as the effect JPEG compression has on certain types of images, such as text-on-background versus pictures, but in general this decision holds true.
 
 The problem with both compressed formats such as JPEG and PNG for cropping is that they do not support skipping data to the region that is being cropped. There is no way of knowing which byte corresponds to which pixel unless the image has first been decompressed. 
 
-Interestingly, there used to exist a JPEG container format called JPEG File Interchange Format (JFIF) that stored byte offset markers that could be used to seek through the file quickly. The problem with JFIF is that it isn't used anywhere anymore. It's just a historical artifact. 
+Interestingly, there is a historical container format called JPEG File Interchange Format (JFIF) that stored byte offset markers that could be used to seek through the file quickly. The problem with JFIF is that it isn't used anywhere anymore. It's just a historical artifact. 
 
 BMP does work great for cropping, but as a Windows file format is is not available or interoperable for libraries. For examble, the popular C library `libvips` does not support BMP out of the box.
 
 This brings us to TIFF - the god object of file formats. TIFF embeds images with multiple kinds of compression, sampling and color schemes, and the popular EXIF format is actually just TIFF in disguise. TIFF is both useful and sad.
 
-### TIFF usefulness for cropping
+### TIFF - the good
 
 TIFF has a concept called `stripes`. A stripe is a set of (possible one) row(s) that have been written as one bytes chunk. Each stripe has a corresponding `StripeCount` and `StripeOffset`. Note that stripes do not have to be put in sequential order, but they usually are.
 

@@ -3,6 +3,7 @@ package imgcrop_test
 import (
 	"fmt"
 	"image"
+	"image/png"
 	"io"
 	"log"
 	"math/rand"
@@ -10,8 +11,7 @@ import (
 	"os"
 	"testing"
 
-	govips "github.com/davidbyttow/govips/v2/vips"
-	"github.com/sebnyberg/imgcrop/vipsx"
+	"github.com/sebnyberg/imgcrop/internal/exp/vipsx"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/image/tiff"
 )
@@ -29,10 +29,27 @@ const (
 	outflags = os.O_RDWR | os.O_CREATE | os.O_TRUNC
 )
 
-func BenchmarkTIFF(b *testing.B) {
-	defer govips.Shutdown()
+func TestA(t *testing.T) {
+	// f, err := os.OpenFile(tiffBigPath, inflags, 0)
+	// require.NoError(t, err)
+	// img, err := tiff.Decode(f)
+	// require.NoError(t, err)
+	// out, err := os.OpenFile("testdata/big.png", outflags, 0644)
+	// require.NoError(t, err)
+	// var enc png.Encoder
+	// enc.CompressionLevel = png.BestSpeed
+	// err = enc.Encode(out, img)
+	// require.NoError(t, err)
+	f, err := os.OpenFile("testdata/big.tif", inflags, 0)
+	require.NoError(t, err)
+	img, err := tiff.Decode(f)
+	var enc png.Encoder
+	require.NoError(t, err)
+	_ = img
+}
 
-	type cropFn func(r io.Reader, area image.Rectangle, out io.Writer) error
+func BenchmarkTIFF(b *testing.B) {
+	type cropFn func(src io.Reader, dst io.Writer, region image.Rectangle) error
 	type cropBench struct {
 		name string
 		fn   cropFn
@@ -60,7 +77,7 @@ func BenchmarkTIFF(b *testing.B) {
 					for _, cropper := range []cropBench{
 						{
 							name: "govips",
-							fn:   vipsx.Crop,
+							fn:   vipsx.GoVipsCrop,
 						},
 						{
 							name: "vipsimage",
@@ -80,7 +97,7 @@ func BenchmarkTIFF(b *testing.B) {
 								offy := rand.Intn(height - dy)
 								rect := image.Rect(offx, offy, offx+dx, offy+dy)
 								if cropper.name == "vipsimage" {
-									vips2crop(imgPath, rect, "tmp.tif")
+									vipsx.VipsImageCrop(imgPath, rect, "testdata/big-cropped.tif")
 								} else {
 									err = cropper.fn(f, rect, io.Discard)
 									require.NoError(b, err)
