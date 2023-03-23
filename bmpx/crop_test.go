@@ -1,8 +1,12 @@
 package bmpx
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"image"
+	"image/color"
+	"image/draw"
 	"io"
 	"log"
 	"math/rand"
@@ -30,6 +34,7 @@ const inflags = os.O_RDONLY
 const outflags = os.O_WRONLY | os.O_TRUNC | os.O_CREATE
 
 func TestCrop(t *testing.T) {
+	// todo(sn): need better, more controlled tests
 	inflags := os.O_RDONLY
 	f, err := os.OpenFile("testdata/big.bmp", inflags, 0)
 	require.NoError(t, err)
@@ -47,6 +52,36 @@ func TestCrop(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, img.Bounds().Dx(), rect.Dx())
 	require.Equal(t, img.Bounds().Dy(), rect.Dy())
+}
+
+func TestResize(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		// Create random rgba
+		w := 100 + rand.Intn(200)
+		h := 100 + rand.Intn(200)
+		img := randRGBA(w, h)
+		var orig, cropped bytes.Buffer
+		err := bmp.Encode(&orig, img)
+		require.NoError(t, err)
+		offx := rand.Intn(w)
+		offy := rand.Intn(h)
+		dx := rand.Intn(w - offx)
+		dy := rand.Intn(h - offy)
+		region := image.Rect(offx, offy, offx+dx, offy+dy)
+		err = Crop(&orig, &cropped, region)
+		require.NoError(t, err)
+		got, err := bmp.Decode(&cropped)
+		require.NoError(t, err)
+		want, err := stdlibCrop(img, region)
+		require.NoError(t, err)
+		for y := 0; y < h; y++ {
+			for x := 0; x < w; x++ {
+				gotxy := got.At(x, y)
+				wantxy := want.At(x, y)
+				require.Equal(t, gotxy, wantxy, "(%v,%v)", x, y)
+			}
+		}
+	}
 }
 
 func BenchmarkCrop(b *testing.B) {
@@ -207,4 +242,37 @@ func dl(url, path string) error {
 		return err
 	}
 	return nil
+}
+
+type subImager interface {
+	SubImage(r image.Rectangle) image.Image
+}
+
+func stdlibCrop(img image.Image, rect image.Rectangle) (image.Image, error) {
+	subimg, ok := img.(subImager)
+	if !ok {
+		return nil, errors.New("image does not support sub-imaging")
+	}
+	img = subimg.SubImage(rect)
+	fixedCoords := draw.Draw(img, rect, img)
+	return subimg.SubImage(rect), nil
+}
+
+func randRGBA(w, h int) *image.NRGBA {
+	img := image.NewNRGBA(image.Rect(0, 0, w, h))
+	row := make([]byte, img.Stride)
+	for i := 0; i < h; i++ {
+		_, err := rand.Read(row)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		for j := 0; j < w; j++ {
+			r := uint8(row[j*4])
+			g := uint8(row[j*4+1])
+			b := uint8(row[j*4+2])
+			a := uint8(row[j*4+3])
+			img.SetNRGBA(j, i, color.NRGBA{r, g, b, a})
+		}
+	}
+	return img
 }
