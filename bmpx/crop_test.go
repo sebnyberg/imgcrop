@@ -29,18 +29,27 @@ const (
 const inflags = os.O_RDONLY
 const outflags = os.O_WRONLY | os.O_TRUNC | os.O_CREATE
 
-func TestBMP(t *testing.T) {
+func TestCrop(t *testing.T) {
 	inflags := os.O_RDONLY
 	f, err := os.OpenFile("testdata/big.bmp", inflags, 0)
 	require.NoError(t, err)
+	defer f.Close()
+	outflags := os.O_RDWR | os.O_TRUNC | os.O_CREATE
 	outf, err := os.OpenFile("testdata/big-cropped.bmp", outflags, 0640)
 	require.NoError(t, err)
+	defer outf.Close()
 	rect := image.Rect(24500, 10000, 24900, 11000)
 	err = Crop(f, outf, rect)
-	outf.Close()
+	require.NoError(t, err)
+	_, err = outf.Seek(0, 0)
+	require.NoError(t, err)
+	img, err := bmp.Decode(outf)
+	require.NoError(t, err)
+	require.Equal(t, img.Bounds().Dx(), rect.Dx())
+	require.Equal(t, img.Bounds().Dy(), rect.Dy())
 }
 
-func BenchmarkBMP(b *testing.B) {
+func BenchmarkCrop(b *testing.B) {
 	inflags := os.O_RDONLY
 	f, err := os.OpenFile(bmpBigPath, inflags, 0)
 	require.NoError(b, err)
