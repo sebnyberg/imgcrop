@@ -7,7 +7,7 @@ require (
 	github.com/davidbyttow/govips/v2 v2.11.0
 	github.com/stretchr/testify v1.8.2
 	github.com/vipsimage/vips v0.0.5
-	golang.org/x/image v0.6.0
+	golang.org/x/image v0.10.0
 )
 
 require (
