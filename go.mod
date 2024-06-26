@@ -7,7 +7,7 @@ require (
 	github.com/davidbyttow/govips/v2 v2.11.0
 	github.com/stretchr/testify v1.8.2
 	github.com/vipsimage/vips v0.0.5
-	golang.org/x/image v0.10.0
+	golang.org/x/image v0.18.0
 )
 
 require (
@@ -17,7 +17,7 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 )
 
 require (
