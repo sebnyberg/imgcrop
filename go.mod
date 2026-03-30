@@ -1,13 +1,13 @@
 module github.com/sebnyberg/imgcrop
 
-go 1.19
+go 1.25.0
 
 require (
 	github.com/SaveTheRbtz/zstd-seekable-format-go v0.6.1
 	github.com/davidbyttow/govips/v2 v2.11.0
 	github.com/stretchr/testify v1.8.2
 	github.com/vipsimage/vips v0.0.5
-	golang.org/x/image v0.18.0
+	golang.org/x/image v0.38.0
 )
 
 require (
@@ -17,7 +17,7 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 )
 
 require (
